@@ -1,0 +1,63 @@
+version: '2'
+services:
+
+
+
+  elasticsearch:
+    image: elasticsearch
+    restart: always
+
+  kibana:
+    image: kibana
+    restart: always  
+    ports:
+      - "5601:5601"
+    links:
+    - elasticsearch
+
+  logstash:
+    image: logstash
+    restart: always
+    command: logstash -f /config-dir/logstash.conf
+    volumes:
+      - "./logstash.conf:/config-dir/logstash.conf"
+    links:
+    - elasticsearch
+
+  mysql:
+    build: ./mysql_image
+    image: mysql_filebeat
+    restart: always
+    volumes:
+      - "./filebeat_mysql.yml:/etc/filebeat/filebeat.yml"
+    environment:
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    links:
+      - logstash
+
+  wordpress:
+    build: ./wordpress_image
+    image: wordpress_filebeat
+    restart: always
+    volumes:
+      - "./filebeat_wordpress.yml:/etc/filebeat/filebeat.yml"
+    depends_on:
+      - mysql
+    links:
+      - mysql
+      - logstash
+    ports:
+      - "8080:80"
+
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_PASSWORD: wordpress   
+
+
+
+
+
+
